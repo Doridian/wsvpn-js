@@ -9,6 +9,7 @@
     "build": "rimraf dist && tsc --project .",
     "prepare": "npm run build"
   },
+  "files": ["dist"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Doridian/wsvpn-js.git"
