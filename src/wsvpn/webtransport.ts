@@ -1,4 +1,4 @@
-import { BufferArray } from "../util/buffer_array";
+import { ArrayBufferQueue } from "../util/buffer_queue";
 import { NotReadyError } from "../util/errors";
 import { WSVPNBase } from "./base";
 
@@ -13,8 +13,8 @@ interface WebTransport {
 }
 
 interface WebTransportStream {
-    writable: WritableStream;
-    readable: ReadableStream;
+    writable: WritableStream<Uint8Array>;
+    readable: ReadableStream<Uint8Array>;
 }
 
 declare var WebTransport: {
@@ -33,10 +33,10 @@ export class WSVPNWebTransport extends WSVPNBase {
 
     private stream?: WebTransportStream;
 
-    private controlWriter?: WritableStreamDefaultWriter;
-    private controlReader?: ReadableStreamDefaultReader;
-    private dataWriter?: WritableStreamDefaultWriter;
-    private dataReader?: ReadableStreamDefaultReader;
+    private controlWriter?: WritableStreamDefaultWriter<Uint8Array>;
+    private controlReader?: ReadableStreamDefaultReader<Uint8Array>;
+    private dataWriter?: WritableStreamDefaultWriter<Uint8Array>;
+    private dataReader?: ReadableStreamDefaultReader<Uint8Array>;
 
     private commandState: number = 0;
     private commandLen: number = 0;
@@ -82,10 +82,10 @@ export class WSVPNWebTransport extends WSVPNBase {
         await this.controlWriter.write(controlU8Array);
     }
 
-    private async commandDecoder(buf: BufferArray): Promise<boolean> {
+    private async commandDecoder(buf: ArrayBufferQueue): Promise<boolean> {
         switch (this.commandState) {
             case 1:
-                const dLen = buf.read(2);
+                const dLen = buf.readU8(2);
                 if (dLen) {
                     this.commandLen = (dLen[0] << 8) | dLen[1];
                     this.commandState = 2;
@@ -93,7 +93,7 @@ export class WSVPNWebTransport extends WSVPNBase {
                 }
                 break;
             case 2:
-                const dataU8 = buf.read(this.commandLen);
+                const dataU8 = buf.readU8(this.commandLen);
                 if (dataU8) {
                     this.commandLen = 0;
                     this.commandState = 0;
@@ -111,22 +111,21 @@ export class WSVPNWebTransport extends WSVPNBase {
             throw new NotReadyError();
         }
 
-        const buf = new BufferArray();
+        const buf = new ArrayBufferQueue();
 
         this.commandState = 0;
         this.commandLen = 0;
 
-        let value, done;
+        let done;
         while (!done) {
             const res = await this.controlReader.read();
-            value = res.value;
             done = res.done;
 
-            if (value.length < 1) {
+            if (!res.value || res.value.length < 1) {
                 continue;
             }
 
-            buf.add(value);
+            buf.add(res.value.buffer);
 
             while (true) {
                 if (await this.commandDecoder(buf)) {
@@ -136,7 +135,7 @@ export class WSVPNWebTransport extends WSVPNBase {
                     break;
                 }
 
-                const typ = buf.read(1);
+                const typ = buf.readU8(1);
                 if (!typ) {
                     break;
                 }
@@ -158,12 +157,12 @@ export class WSVPNWebTransport extends WSVPNBase {
         await this.close();
     }
 
-    protected async sendDataInternal(data: Uint8Array): Promise<void> {
+    protected async sendDataInternal(data: ArrayBuffer): Promise<void> {
         if (!this.dataWriter) {
             throw new NotReadyError();
         }
 
-        await this.dataWriter.write(data);
+        await this.dataWriter.write(new Uint8Array(data));
     }
 
     private async datagramReader(): Promise<void> {
@@ -171,13 +170,14 @@ export class WSVPNWebTransport extends WSVPNBase {
             throw new NotReadyError();
         }
 
-        let value, done;
+        let done;
         while (!done) {
             const res = await this.dataReader.read();
-            value = res.value;
             done = res.done;
-
-            await this.handleData(value);
+            if (!res.value || res.value.length < 1) {
+                continue;
+            }
+            await this.handleData(res.value.buffer);
         }
 
         await this.close();

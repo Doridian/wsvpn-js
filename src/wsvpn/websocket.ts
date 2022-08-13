@@ -14,6 +14,7 @@ export class WSVPNWebSocket extends WSVPNBase {
 
     protected async connectInternal(): Promise<void> {
         this.webSocket = new WebSocket(this.url);
+        this.webSocket.binaryType = "arraybuffer";
         this.webSocket.onmessage = this.websocketOnMessage.bind(this);
         
         return new Promise<void>((resolve, reject) => {
@@ -37,7 +38,7 @@ export class WSVPNWebSocket extends WSVPNBase {
                 return;
             case "object":
                 if (ev.data instanceof Blob) {
-                    await this.handleData(new Uint8Array(await ev.data.arrayBuffer()));
+                    await this.handleData(await ev.data.arrayBuffer());
                 }
                 return;
         }
@@ -51,7 +52,7 @@ export class WSVPNWebSocket extends WSVPNBase {
         this.webSocket.send(dataStr);
     }
 
-    protected async sendDataInternal(data: Uint8Array): Promise<void> {
+    protected async sendDataInternal(data: ArrayBuffer): Promise<void> {
         if (!this.webSocket) {
             throw new NotReadyError();
         }

@@ -8,14 +8,14 @@ interface PromiseResolver<T> {
 
 type DefragObject = {
     time: number;
-    data: Map<number, Uint8Array>;
+    data: Map<number, ArrayBuffer>;
     lastIndex: number;
     totalLen: number;
 };
 
 export class WSVPNErrorEvent extends ErrorEvent {
-    constructor(err: Error) {
-        super("error", err);
+    constructor(error: Error) {
+        super("error", { error });
     }
 }
 
@@ -26,7 +26,7 @@ export class InitEvent extends Event {
 }
 
 export class PacketEvent extends Event {
-    constructor(public readonly packet: Uint8Array) {
+    constructor(public readonly packet: ArrayBuffer) {
         super("packet");
     }
 }
@@ -185,13 +185,15 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
         }, false, data.id);
     }
 
-    protected async handleData(data: Uint8Array): Promise<void> {
+    protected async handleData(data: ArrayBuffer): Promise<void> {
         if (!this.fragmentationEnabled) {
             await this.handlePacket(data);
             return;
         }
 
-        const fragIdent = data[0];
+        const d8 = new Uint8Array(data);
+
+        const fragIdent = d8[0];
         if (fragIdent === 0b10000000) {
             await this.handlePacket(data.slice(1));
             return;
@@ -200,7 +202,7 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
         const fragIndex = fragIdent & 0b01111111;
         const isLastFragment = (fragIdent & 0b10000000) === 0b10000000;
 
-        const packetId = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
+        const packetId = (d8[1] << 24) | (d8[2] << 16) | (d8[3] << 8) | d8[4];
 
         let defrag = this.defragBuffer.get(packetId);
         if (!defrag) {
@@ -216,7 +218,7 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
         defrag.time = Date.now();
         const fragData = data.slice(5);
         defrag.data.set(fragIndex, fragData);
-        defrag.totalLen += fragData.length;
+        defrag.totalLen += fragData.byteLength;
 
         if (isLastFragment) {
             defrag.lastIndex = fragIndex;
@@ -225,52 +227,57 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
         if (defrag.data.size === defrag.lastIndex+1) {
             this.defragBuffer.delete(packetId);
 
-            const pkt = new Uint8Array(defrag.totalLen);
+            const pkt = new ArrayBuffer(defrag.totalLen);
+            const pkt8 = new Uint8Array(pkt);
             let offset = 0;
             for (let i = 0; i < defrag.lastIndex; i++) {
                 const d = defrag.data.get(i)!;
-                pkt.set(d, offset);
-                offset += d.length;
+                pkt8.set(new Uint8Array(d), offset);
+                offset += d.byteLength;
             }
 
             this.handlePacket(pkt);
         }
     }
 
-    public async sendPacket(packet: Uint8Array): Promise<void> {
+    public async sendPacket(packet: ArrayBuffer): Promise<void> {
         if (!this.fragmentationEnabled) {
             await this.sendDataInternal(packet);
             return;
         }
 
-        if (packet.length < this.maxPacketSize) {
-            const data = new Uint8Array(packet.length + 1);
-            data[0] = 0b10000000;
-            data.set(packet, 1);
-            await this.sendDataInternal(data);
+        const p8 = new Uint8Array(packet);
+
+        if (packet.byteLength < this.maxPacketSize) {
+            const data = new ArrayBuffer(packet.byteLength + 1);
+            const d8 = new Uint8Array(data);
+            d8[0] = 0b10000000;
+            d8.set(p8, 1);
+            await this.sendDataInternal(d8);
             return;
         }
 
         const packetId = this.defragPacketId++;
 
         let fragIndex = 0;
-        for (let offset = 0; offset < packet.length; offset += this.maxPacketSize) {
-            const left = packet.length - offset;
+        for (let offset = 0; offset < packet.byteLength; offset += this.maxPacketSize) {
+            const left = packet.byteLength - offset;
             
             const useLen = Math.min(this.maxPacketSize, left);
-            const data = new Uint8Array(useLen + 5);
+            const data = new ArrayBuffer(useLen + 5);
+            const d8 = new Uint8Array(data);
             
-            data[0] = fragIndex;
+            d8[0] = fragIndex;
             if (left < this.maxPacketSize) {
-                data[0] |= 0b10000000;
+                d8[0] |= 0b10000000;
             }
 
-            data[1] = (packetId >>> 24) & 0xFF;
-            data[2] = (packetId >>> 16) & 0xFF;
-            data[3] = (packetId >>> 8) & 0xFF;
-            data[4] = packetId & 0xFF;
-            
-            data.set(packet.slice(offset, useLen), 5);
+            d8[1] = (packetId >>> 24) & 0xFF;
+            d8[2] = (packetId >>> 16) & 0xFF;
+            d8[3] = (packetId >>> 8) & 0xFF;
+            d8[4] = packetId & 0xFF;
+
+            d8.set(new Uint8Array(packet, offset, useLen), 5);
 
             await this.sendDataInternal(data);
 
@@ -278,7 +285,7 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
         }
     }
 
-    public async handlePacket(packet: Uint8Array): Promise<void> {
+    public async handlePacket(packet: ArrayBuffer): Promise<void> {
         this.dispatchEvent(new PacketEvent(packet));
     }
 
@@ -319,5 +326,5 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
     protected abstract connectInternal(): Promise<void>;
 
     protected abstract sendCommandInternal(dataStr: string): Promise<void>;
-    protected abstract sendDataInternal(data: Uint8Array): Promise<void>;
+    protected abstract sendDataInternal(data: ArrayBuffer): Promise<void>;
 }
