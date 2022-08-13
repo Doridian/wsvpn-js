@@ -1,6 +1,6 @@
-import { ArrayBufferQueue } from "../util/buffer_queue";
-import { NotReadyError } from "../util/errors";
-import { WSVPNBase } from "./base";
+import { ArrayBufferQueue } from "../util/buffer_queue.js";
+import { NotReadyError } from "../util/errors.js";
+import { WSVPNBase } from "./base.js";
 
 interface WebTransport {
     ready: Promise<void>;

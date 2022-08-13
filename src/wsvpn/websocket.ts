@@ -1,5 +1,5 @@
-import { ClosedError, NotReadyError } from "../util/errors";
-import { WSVPNBase } from "./base";
+import { ClosedError, NotReadyError } from "../util/errors.js";
+import { WSVPNBase } from "./base.js";
 
 export class WSVPNWebSocket extends WSVPNBase {
     private webSocket?: WebSocket;

@@ -1,5 +1,5 @@
-import { ClosedError } from "../util/errors";
-import { InitParameters } from "../util/params";
+import { ClosedError } from "../util/errors.js";
+import { InitParameters } from "../util/params.js";
 
 interface PromiseResolver<T> {
     resolve(param: T): void;
