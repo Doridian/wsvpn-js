@@ -1,4 +1,4 @@
-# WSVPN Web
+# WSVPN-JS
 
 ## What is this?
 
