@@ -1,0 +1,18 @@
+{
+  "name": "@wsvpn/js",
+  "private": false,
+  "version": "1.0.2",
+  "description": "WSVPN JS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rimraf dist && tsc --project .",
+    "prepare": "npm run build"
+  },
+  "author": "Doridian",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^4.7.4"
+  }
+}
