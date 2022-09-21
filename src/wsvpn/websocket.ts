@@ -39,6 +39,8 @@ export class WSVPNWebSocket extends WSVPNBase {
             case "object":
                 if (ev.data instanceof Blob) {
                     await this.handleData(await ev.data.arrayBuffer());
+                } else if (ev.data instanceof ArrayBuffer) {
+                    await this.handleData(ev.data);
                 }
                 return;
         }
