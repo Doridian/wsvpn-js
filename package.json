@@ -1,7 +1,7 @@
 {
   "name": "@wsvpn/js",
   "private": false,
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "WSVPN JS",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
