@@ -1,32 +1,15 @@
 import { ArrayBufferQueue } from "../util/buffer_queue.js";
 import { NotReadyError } from "../util/errors.js";
 import { WSVPNBase } from "./base.js";
-
-interface WebTransport {
-    ready: Promise<void>;
-    closed: Promise<void>;
-
-    createBidirectionalStream(): WebTransportStream;
-    datagrams: WebTransportStream;
-
-    close(): void | Promise<void>;
-}
-
-interface WebTransportStream {
-    writable: WritableStream<Uint8Array>;
-    readable: ReadableStream<Uint8Array>;
-}
-
-declare var WebTransport: {
-    prototype: WebTransport;
-    new(url: string): WebTransport;
-};
+import { WebTransportConstructor, WebTransport, WebTransportOptions, WebTransportStream } from "./webtransport-w3c.js";
 
 const enum ControlStreamType {
     COMMAND = 0,
     PING = 1,
     PONG = 2,
 }
+
+declare var WebTransport: WebTransportConstructor;
 
 export class WSVPNWebTransport extends WSVPNBase {
     private transport?: WebTransport;
@@ -41,12 +24,12 @@ export class WSVPNWebTransport extends WSVPNBase {
     private commandState: number = 0;
     private commandLen: number = 0;
 
-    public constructor(url: string) {
+    public constructor(url: string, private options: WebTransportOptions = {}) {
         super(url, 1200);
     }
 
     protected async connectInternal(): Promise<void> {
-        this.transport = new WebTransport(this.url);
+        this.transport = new WebTransport(this.url, this.options);
         this.closeOnDone(this.transport.closed);
         await this.transport.ready;
 

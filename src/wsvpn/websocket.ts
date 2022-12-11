@@ -4,7 +4,7 @@ import { WSVPNBase } from "./base.js";
 export class WSVPNWebSocket extends WSVPNBase {
     private webSocket?: WebSocket;
 
-    constructor(url: string) {
+    constructor(url: string, private protocols?: string | string[]) {
         super(url);
     }
 
@@ -13,7 +13,7 @@ export class WSVPNWebSocket extends WSVPNBase {
     }
 
     protected async connectInternal(): Promise<void> {
-        this.webSocket = new WebSocket(this.url);
+        this.webSocket = new WebSocket(this.url, this.protocols);
         this.webSocket.binaryType = "arraybuffer";
         this.webSocket.onmessage = this.websocketOnMessage.bind(this);
         
