@@ -24,7 +24,7 @@ export class WSVPNWebTransport extends WSVPNBase {
     private commandState: number = 0;
     private commandLen: number = 0;
 
-    public constructor(url: string, private options: WebTransportOptions = {}) {
+    public constructor(url: string, private options?: WebTransportOptions) {
         super(url, 1200);
     }
 
