@@ -22,7 +22,7 @@
   "author": "Doridian",
   "license": "BSD-3-Clause",
   "devDependencies": {
-    "rimraf": "4.4.0",
+    "rimraf": "4.4.1",
     "typescript": "5.0.2"
   }
 }
