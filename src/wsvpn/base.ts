@@ -50,7 +50,6 @@ export abstract class WSVPNBase extends wsvpnEventTargetOverride {
     private remoteFeatures: Set<string> = new Set();
     private usedFeatures: Set<string> = new Set();
     private localFeatures: Set<string> = new Set([
-        "datagram_id_0",
         "fragmentation",
     ]);
     private fragmentationEnabled: boolean = false;
