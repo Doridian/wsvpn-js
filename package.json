@@ -23,6 +23,6 @@
   "license": "BSD-3-Clause",
   "devDependencies": {
     "rimraf": "6.0.1",
-    "typescript": "5.7.2"
+    "typescript": "5.7.3"
   }
 }
